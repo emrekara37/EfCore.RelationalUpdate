@@ -8,6 +8,7 @@ namespace EfCoreExtensions.RelationalUpdate
         public RelationalUpdateConfiguration()
         {
             UpdatedTypes = new List<RelationalUpdateConfigurationType>();
+            TriggerSaveChanges = true;
         }
 
         public RelationalUpdateConfiguration(bool triggerSaveChanges) :this()

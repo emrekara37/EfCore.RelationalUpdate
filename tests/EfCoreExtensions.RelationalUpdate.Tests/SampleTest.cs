@@ -35,14 +35,16 @@ namespace EfCoreExtensions.RelationalUpdate.Tests
         }
 
     }
-    public class UnitTest1
+    public class SampleTest
     {
         [Fact]
-        public async Task Test1()
+        public async Task Sample()
         {
+            // Create Database
             var options = new DbContextOptionsBuilder<TestDbContext>();
             options.UseInMemoryDatabase("test");
             await using var context = new TestDbContext(options.Options);
+            // Seed Data
             await context.Entities.AddAsync(new Entity
             {
                 Name = "Entity ",
@@ -71,23 +73,17 @@ namespace EfCoreExtensions.RelationalUpdate.Tests
                     ChildEntities = c.ChildEntities.Where(x => x.Id > 1).ToList()
                 })
                 .FirstOrDefaultAsync();
-
+            first.ChildEntities.FirstOrDefault().Name = "Updated Child Entity 2";
             first.ChildEntities.Add(new ChildEntity { Name = "Child Entity 3" });
 
-            try
-            {
-                var configuration = new RelationalUpdateConfiguration(true);
-                configuration.AddType(typeof(ChildEntity), true);
+            // Removed Child Entity 1 
+            // Updated Child Entity 2
+            // Added Child Entity 3
 
-                await context.RelationalUpdateAsync(first, configuration);
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine(e);
-                throw;
-            }
-            
-            var a = await context.Entities.Include(p => p.ChildEntities).FirstOrDefaultAsync();
+            await context.RelationalUpdateAsync(first);
+
+            var newValue= await context.Entities.Include(p => p.ChildEntities).FirstOrDefaultAsync();
+
 
         }
 
