@@ -14,10 +14,7 @@ namespace EfCoreExtensions.RelationalUpdate
 {
     public static class RelationalUpdateExtension
     {
-        public static Type GetFirstGenericArgumentsType(this Type type)
-        {
-            return type.GetGenericArguments()[0];
-        }
+       
         public static object GetDefaultValue(this Type t)
         {
             if (t.IsValueType && Nullable.GetUnderlyingType(t) == null)
@@ -29,7 +26,7 @@ namespace EfCoreExtensions.RelationalUpdate
             var collections = entry.Collections;
 
             return collections
-                .Select(p => new RelationalUpdateConfigurationType(GetFirstGenericArgumentsType(p.Metadata.ClrType), true))
+                .Select(p => new RelationalUpdateConfigurationType(GetFirstGenericArgument(p.Metadata.ClrType), true))
                 .ToList();
         }
 
@@ -52,12 +49,19 @@ namespace EfCoreExtensions.RelationalUpdate
 
         public static IQueryable Query(this DbContext context, Type entityType)
         {
+#pragma warning disable EF1001 // Internal EF Core API usage.
             return (IQueryable)((IDbSetCache)context).GetOrAddSet(context.GetDependencies().SetSource, entityType);
+#pragma warning restore EF1001 // Internal EF Core API usage.
         }
 
         public static string GetPrimaryKeyName(this EntityEntry entry)
         {
             return entry.Metadata.FindPrimaryKey().Properties.FirstOrDefault()?.Name;
+        }
+
+        public static Type GetFirstGenericArgument(this Type type)
+        {
+            return type.GetGenericArguments()[0];
         }
 
         public static async ValueTask<int> RelationalUpdateAsync<T>(this DbContext context, T entity, RelationalUpdateConfiguration configuration) where T : class
@@ -68,40 +72,44 @@ namespace EfCoreExtensions.RelationalUpdate
 
             foreach (var collectionType in configuration.UpdatedTypes)
             {
-                var propertyName = navigation.Where(p => p.ClrType.GetGenericArguments()[0] == collectionType.Type).Select(p => p.Name).FirstOrDefault();
+                var propertyName = navigation.Where(p => p.ClrType.GetFirstGenericArgument() == collectionType.Type).Select(p => p.Name).FirstOrDefault();
                 if (string.IsNullOrEmpty(propertyName)) continue;
                 var collection = entry.Collection(propertyName);
 
                 var foreignKey = collection.Metadata.ForeignKey;
                 var primaryKeyName = collection.EntityEntry.GetPrimaryKeyName();
 
-                var dynamicList = (IEnumerable<dynamic>)entity.GetType().GetProperty(propertyName)?.GetValue(entity, null);
-                var primaryKeyList = (dynamicList ?? throw new NullReferenceException())
-                    .Select(p => p.GetType().GetProperty(primaryKeyName)?.GetValue(p, null))
-                    .Where(p => p != null && p != GetDefaultValue(p.GetType()))
+                var collectionValues = (IEnumerable<dynamic>)entity.GetType().GetProperty(propertyName)?.GetValue(entity, null);
+                var dynamicList = (collectionValues ?? throw new InvalidOperationException()).ToDynamicList();
+                var currentIds = dynamicList.Select(p => p.GetType().GetProperty(primaryKeyName)?.GetValue(p, null))
                     .ToList();
-
+             
                 var fkName = foreignKey.Properties.FirstOrDefault()?.Name;
-                if (!collectionType.RemoveDataInDatabase) continue;
-                //await collection.Query()
-                //     .Where($"{fkName} == @0", primaryKey)
-                //     .Where($"p=> @0.Contains(p.{primaryKeyName}) == false", primaryKeyList)
-                //     .ToDynamicListAsync();
                 var databaseValues = await context.Query(collectionType.Type)
                      .AsQueryable()
                      .Where($"{fkName} == @0", primaryKey)
                      .ToDynamicListAsync();
-
-                foreach (dynamic o in databaseValues)
+                var databaseIds = databaseValues
+                    .Select(p => p.GetType().GetProperty(primaryKeyName)?.GetValue(p, null))
+                    .ToList();
+                if (collectionType.RemoveDataInDatabase)
+                {
+                    var deletedItems = databaseValues.Where(p =>
+                            currentIds.Contains(p.GetType().GetProperty(primaryKeyName)?.GetValue(p, null)) == false)
+                        .ToList();
+                    context.RemoveRange(deletedItems);
+                }
+                foreach (dynamic o in dynamicList)
                 {
                     var id = o.GetType().GetProperty(primaryKeyName)?.GetValue(o, null);
-                    if (primaryKeyList.Contains(id))
+                    if (databaseIds.Contains(id))
                     {
-                        context.Entry(o).State = EntityState.Detached;
+                        context.Entry(o).State = EntityState.Modified;
                     }
                     else
                     {
-                        context.Remove(o);
+                        o.GetType().GetProperty(fkName)?.SetValue(o, primaryKey, null);
+                        context.Entry(o).State = EntityState.Added;
                     }
                 }
 
