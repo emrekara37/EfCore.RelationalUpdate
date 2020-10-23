@@ -15,12 +15,6 @@ namespace EfCoreExtensions.RelationalUpdate
     public static class RelationalUpdateExtension
     {
        
-        public static object GetDefaultValue(this Type t)
-        {
-            if (t.IsValueType && Nullable.GetUnderlyingType(t) == null)
-                return Activator.CreateInstance(t);
-            return null;
-        }
         private static List<RelationalUpdateConfigurationType> GetCollectionTypes(this EntityEntry entry)
         {
             var collections = entry.Collections;
