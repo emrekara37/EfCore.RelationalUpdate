@@ -5,6 +5,8 @@ VisualStudioVersion = 16.0.30523.141
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "EfCoreExtensions.RelationalUpdate", "src\EfCoreExtensions.RelationalUpdate\EfCoreExtensions.RelationalUpdate.csproj", "{49E086E1-D170-406E-8C83-5DF035984671}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EfCoreExtensions.RelationalUpdate.Tests", "tests\EfCoreExtensions.RelationalUpdate.Tests\EfCoreExtensions.RelationalUpdate.Tests.csproj", "{28436691-13CB-40E9-835B-98224EB8606C}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -15,6 +17,10 @@ Global
 		{49E086E1-D170-406E-8C83-5DF035984671}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{49E086E1-D170-406E-8C83-5DF035984671}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{49E086E1-D170-406E-8C83-5DF035984671}.Release|Any CPU.Build.0 = Release|Any CPU
+		{28436691-13CB-40E9-835B-98224EB8606C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{28436691-13CB-40E9-835B-98224EB8606C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{28436691-13CB-40E9-835B-98224EB8606C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{28436691-13CB-40E9-835B-98224EB8606C}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
