@@ -1,5 +1,5 @@
 # EfCore.RelationalUpdate
-This package provides relational update with entity framework core 
+This package provides relational update
 # Usage
 ## No Configuration
 
