@@ -18,14 +18,14 @@ namespace EfCoreExtensions.RelationalUpdate
         public bool RemoveDataInDatabase { get; set; }
         public bool TriggerSaveChanges { get; set; }
         public List<RelationalUpdateConfigurationType> UpdatedTypes { get; set; }
-        public RelationalUpdateConfiguration AddType(Type type)
+        public RelationalUpdateConfiguration AddType(Type updatedType)
         {
-            AddType(type, RemoveDataInDatabase);
+            AddType(updatedType, RemoveDataInDatabase);
             return this;
         }
-        public RelationalUpdateConfiguration AddType(Type type, bool removeDataInDatabase)
+        public RelationalUpdateConfiguration AddType(Type updatedType, bool removeDataInDatabase)
         {
-            UpdatedTypes.Add(new RelationalUpdateConfigurationType(type, removeDataInDatabase));
+            UpdatedTypes.Add(new RelationalUpdateConfigurationType(updatedType, removeDataInDatabase));
             return this;
         }
 
