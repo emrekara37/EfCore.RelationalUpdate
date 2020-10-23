@@ -9,6 +9,11 @@ namespace EfCoreExtensions.RelationalUpdate
         {
             UpdatedTypes = new List<RelationalUpdateConfigurationType>();
         }
+
+        public RelationalUpdateConfiguration(bool triggerSaveChanges) :this()
+        {
+            TriggerSaveChanges = triggerSaveChanges;
+        }
         public bool RemoveDataInDatabase { get; set; }
         public bool TriggerSaveChanges { get; set; }
         public List<RelationalUpdateConfigurationType> UpdatedTypes { get; set; }

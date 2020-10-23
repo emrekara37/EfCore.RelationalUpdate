@@ -1,10 +1,14 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Dynamic.Core;
+using System.Linq.Expressions;
+using System.Reflection;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
+using Microsoft.EntityFrameworkCore.Internal;
 
 namespace EfCoreExtensions.RelationalUpdate
 {
@@ -43,11 +47,19 @@ namespace EfCoreExtensions.RelationalUpdate
             return entry.Metadata.FindPrimaryKey().Properties.Select(p => entry.Property(p.Name).CurrentValue)
                 .FirstOrDefault();
         }
+        public static IQueryable Query(this DbContext context, string entityName) =>
+            context.Query(context.Model.FindEntityType(entityName).ClrType);
+
+        public static IQueryable Query(this DbContext context, Type entityType)
+        {
+            return (IQueryable)((IDbSetCache)context).GetOrAddSet(context.GetDependencies().SetSource, entityType);
+        }
 
         public static string GetPrimaryKeyName(this EntityEntry entry)
         {
             return entry.Metadata.FindPrimaryKey().Properties.FirstOrDefault()?.Name;
         }
+
         public static async ValueTask<int> RelationalUpdateAsync<T>(this DbContext context, T entity, RelationalUpdateConfiguration configuration) where T : class
         {
             var entry = context.Entry(entity);
@@ -59,19 +71,26 @@ namespace EfCoreExtensions.RelationalUpdate
                 var propertyName = navigation.Where(p => p.ClrType.GetGenericArguments()[0] == collectionType.Type).Select(p => p.Name).FirstOrDefault();
                 if (string.IsNullOrEmpty(propertyName)) continue;
                 var collection = entry.Collection(propertyName);
+
                 var foreignKey = collection.Metadata.ForeignKey;
                 var primaryKeyName = collection.EntityEntry.GetPrimaryKeyName();
 
-                var dynamicList = await collection.CurrentValue.ToDynamicListAsync();
-                var primaryKeyList = dynamicList
+                var dynamicList = (IEnumerable<dynamic>)entity.GetType().GetProperty(propertyName)?.GetValue(entity, null);
+                var primaryKeyList = (dynamicList ?? throw new NullReferenceException())
                     .Select(p => p.GetType().GetProperty(primaryKeyName)?.GetValue(p, null))
-                    .Where(p => p != GetDefaultValue(p.GetType()))
+                    .Where(p => p != null && p != GetDefaultValue(p.GetType()))
                     .ToList();
 
                 var fkName = foreignKey.Properties.FirstOrDefault()?.Name;
-
                 if (!collectionType.RemoveDataInDatabase) continue;
-                var databaseValues = await collection.Query().Where($"{fkName} == @0", primaryKey).ToDynamicListAsync();
+                //await collection.Query()
+                //     .Where($"{fkName} == @0", primaryKey)
+                //     .Where($"p=> @0.Contains(p.{primaryKeyName}) == false", primaryKeyList)
+                //     .ToDynamicListAsync();
+                var databaseValues = await context.Query(collectionType.Type)
+                     .AsQueryable()
+                     .Where($"{fkName} == @0", primaryKey)
+                     .ToDynamicListAsync();
 
                 foreach (dynamic o in databaseValues)
                 {
