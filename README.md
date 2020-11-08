@@ -1,5 +1,8 @@
 # EfCore.RelationalUpdate
 This package provides relational update
+
+https://www.nuget.org/packages/EfCore.RelationalUpdate/
+
 # Usage
 ## No Configuration
 
